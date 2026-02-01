@@ -19,8 +19,8 @@ async def handler(ws):
         # TODO: recon.update_from_r1_batch(data)
 
 async def main():
-    async with websockets.serve(handler, "0.0.0.0", 8765, max_size=50_000_000):
-        print("Listening on ws://0.0.0.0:8765")
+    async with websockets.serve(handler, "127.0.0.1", 8765, max_size=50_000_000):
+        print("Listening on ws://127.0.0.1:8765")
         await asyncio.Future()
 
 asyncio.run(main())

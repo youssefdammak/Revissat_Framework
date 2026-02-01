@@ -18,7 +18,7 @@ SENT_DIR = WATCH_DIR / "sent"
 SENT_DIR.mkdir(parents=True, exist_ok=True)
 
 # your reconstruction computer IP
-RECEIVER_WS = "ws://192.168.1.50:8765"
+RECEIVER_WS = "ws://127.0.0.1:8765"
 
 POLL_SECONDS = 0.25
 MAX_SIZE = 50_000_000  # 50MB
