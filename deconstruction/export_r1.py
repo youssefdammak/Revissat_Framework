@@ -1,9 +1,10 @@
 import json
 import gzip
 import os
+import time
 from pathlib import Path
-import torch
 
+import torch
 import cv2
 from ultralytics import YOLO
 
@@ -15,64 +16,63 @@ BATCH_SIZE = 30
 OUT_DIR.mkdir(exist_ok=True)
 
 DONE_FILE = OUT_DIR / "DONE"
+START_FILE = OUT_DIR / "START.json"
 if DONE_FILE.exists():
     DONE_FILE.unlink()
 
 model = YOLO(WEIGHTS)
 
-# CPU fallback if no CUDA GPU is available
 device = 0 if torch.cuda.is_available() else "cpu"
 print("Using device:", device)
 
 cap = cv2.VideoCapture(VIDEO_IN)
+if not cap.isOpened():
+    raise RuntimeError(f"Failed to open video: {VIDEO_IN}")
+
 fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+
+# write START marker (for stable delay)
+START_FILE.write_text(
+    json.dumps({"video_start_ts": time.time(), "fps": float(fps)}),
+    encoding="utf-8",
+)
+print("Created START marker ->", START_FILE)
 
 stats_path = OUT_DIR / "sizes_and_datarates.txt"
 
 def bytes_to_kb(n_bytes: int) -> float:
     return n_bytes / 1024.0
 
-def bytes_per_sec_to_kbps(bps: float) -> float:
-    return (bps * 8.0) / 1000.0
+def bytes_per_sec_to_kbps(bytes_per_sec: float) -> float:
+    return (bytes_per_sec * 8.0) / 1000.0
 
 def write_batch(batch_frames, start_frame, end_frame):
     video_stem = Path(VIDEO_IN).stem
     base_name = f"{video_stem}_r1_frames_{start_frame:06d}_to_{end_frame:06d}"
-    json_path = OUT_DIR / f"{base_name}.json"
     gz_path = OUT_DIR / f"{base_name}.json.gz"
 
     payload = {"frames": batch_frames}
 
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
-
+    # write gzipped JSON
     with gzip.open(gz_path, "wt", encoding="utf-8") as f:
         json.dump(payload, f)
 
-    json_size_b = os.path.getsize(json_path)
     gz_size_b = os.path.getsize(gz_path)
 
     n_frames = len(batch_frames)
     duration_s = n_frames / float(fps) if fps else 0.0
 
-    json_bps = (json_size_b / duration_s) if duration_s > 0 else 0.0
     gz_bps = (gz_size_b / duration_s) if duration_s > 0 else 0.0
-
-    json_kb = bytes_to_kb(json_size_b)
     gz_kb = bytes_to_kb(gz_size_b)
-
-    json_kbps = bytes_per_sec_to_kbps(json_bps)
     gz_kbps = bytes_per_sec_to_kbps(gz_bps)
 
     with open(stats_path, "a", encoding="utf-8") as sf:
         sf.write(
             f"{base_name}\n"
             f"  frames: {n_frames}, duration: {duration_s:.3f}s (fps={fps:.3f})\n"
-            f"  json: {json_kb:.2f} KB | rate: {json_kbps:.2f} kbps\n"
             f"  gz:   {gz_kb:.2f} KB | rate: {gz_kbps:.2f} kbps\n\n"
         )
 
-    print("Saved:", json_path)
     print("Saved:", gz_path)
 
 batch_frames = []

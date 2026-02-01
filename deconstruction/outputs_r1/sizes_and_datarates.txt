@@ -1,165 +1,132 @@
 test_r1_frames_000000_to_000029
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 1.74 KB | rate: 14.26 kbps
   gz:   0.18 KB | rate: 1.48 kbps
 
 test_r1_frames_000030_to_000059
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 1.75 KB | rate: 14.34 kbps
   gz:   0.18 KB | rate: 1.49 kbps
 
 test_r1_frames_000060_to_000089
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 1.75 KB | rate: 14.34 kbps
   gz:   0.18 KB | rate: 1.49 kbps
 
 test_r1_frames_000090_to_000119
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 1.77 KB | rate: 14.50 kbps
   gz:   0.18 KB | rate: 1.46 kbps
 
 test_r1_frames_000120_to_000149
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 1.78 KB | rate: 14.58 kbps
   gz:   0.18 KB | rate: 1.50 kbps
 
 test_r1_frames_000150_to_000179
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 8.95 KB | rate: 73.30 kbps
   gz:   1.32 KB | rate: 10.80 kbps
 
 test_r1_frames_000180_to_000209
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.37 KB | rate: 84.98 kbps
   gz:   1.47 KB | rate: 12.04 kbps
 
 test_r1_frames_000210_to_000239
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.37 KB | rate: 84.94 kbps
   gz:   1.48 KB | rate: 12.14 kbps
 
 test_r1_frames_000240_to_000269
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.40 KB | rate: 85.18 kbps
   gz:   1.53 KB | rate: 12.51 kbps
 
 test_r1_frames_000270_to_000299
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.38 KB | rate: 85.06 kbps
   gz:   1.51 KB | rate: 12.41 kbps
 
 test_r1_frames_000300_to_000329
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.36 KB | rate: 84.89 kbps
   gz:   1.51 KB | rate: 12.38 kbps
 
 test_r1_frames_000330_to_000359
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.36 KB | rate: 84.86 kbps
   gz:   1.49 KB | rate: 12.19 kbps
 
 test_r1_frames_000360_to_000389
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.38 KB | rate: 85.05 kbps
   gz:   1.51 KB | rate: 12.34 kbps
 
 test_r1_frames_000390_to_000419
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.37 KB | rate: 84.96 kbps
   gz:   1.48 KB | rate: 12.10 kbps
 
 test_r1_frames_000420_to_000449
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 11.21 KB | rate: 91.87 kbps
   gz:   1.69 KB | rate: 13.83 kbps
 
 test_r1_frames_000450_to_000479
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 12.35 KB | rate: 101.15 kbps
   gz:   1.87 KB | rate: 15.29 kbps
 
 test_r1_frames_000480_to_000509
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 13.76 KB | rate: 112.76 kbps
   gz:   2.04 KB | rate: 16.73 kbps
 
 test_r1_frames_000510_to_000539
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 11.77 KB | rate: 96.43 kbps
   gz:   1.75 KB | rate: 14.37 kbps
 
 test_r1_frames_000540_to_000569
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 12.35 KB | rate: 101.17 kbps
   gz:   1.85 KB | rate: 15.18 kbps
 
 test_r1_frames_000570_to_000599
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 6.93 KB | rate: 56.78 kbps
   gz:   1.04 KB | rate: 8.52 kbps
 
 test_r1_frames_000600_to_000629
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 9.72 KB | rate: 79.62 kbps
   gz:   1.47 KB | rate: 12.02 kbps
 
 test_r1_frames_000630_to_000659
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.65 KB | rate: 87.21 kbps
   gz:   1.56 KB | rate: 12.80 kbps
 
 test_r1_frames_000660_to_000689
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 10.64 KB | rate: 87.17 kbps
   gz:   1.58 KB | rate: 12.93 kbps
 
 test_r1_frames_000690_to_000719
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 16.55 KB | rate: 135.56 kbps
   gz:   2.42 KB | rate: 19.85 kbps
 
 test_r1_frames_000720_to_000749
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 18.20 KB | rate: 149.07 kbps
   gz:   2.68 KB | rate: 21.93 kbps
 
 test_r1_frames_000750_to_000779
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 16.28 KB | rate: 133.34 kbps
   gz:   2.44 KB | rate: 20.02 kbps
 
 test_r1_frames_000780_to_000809
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 12.01 KB | rate: 98.42 kbps
   gz:   1.73 KB | rate: 14.15 kbps
 
 test_r1_frames_000810_to_000839
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 14.85 KB | rate: 121.69 kbps
   gz:   2.19 KB | rate: 17.90 kbps
 
 test_r1_frames_000840_to_000869
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 18.76 KB | rate: 153.70 kbps
   gz:   2.79 KB | rate: 22.86 kbps
 
 test_r1_frames_000870_to_000899
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 18.19 KB | rate: 149.05 kbps
   gz:   2.65 KB | rate: 21.69 kbps
 
 test_r1_frames_000900_to_000929
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 18.79 KB | rate: 153.95 kbps
   gz:   2.78 KB | rate: 22.74 kbps
 
 test_r1_frames_000930_to_000959
   frames: 30, duration: 1.000s (fps=30.000)
-  json: 21.32 KB | rate: 174.62 kbps
   gz:   3.18 KB | rate: 26.02 kbps
 
 test_r1_frames_000960_to_000987
   frames: 28, duration: 0.933s (fps=30.000)
-  json: 12.49 KB | rate: 109.64 kbps
   gz:   1.89 KB | rate: 16.55 kbps
 
