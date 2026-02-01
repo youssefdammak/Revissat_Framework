@@ -2,6 +2,7 @@ import json
 import gzip
 import os
 from pathlib import Path
+import torch
 
 import cv2
 from ultralytics import YOLO
@@ -13,10 +14,14 @@ BATCH_SIZE = 30
 
 OUT_DIR.mkdir(exist_ok=True)
 
+DONE_FILE = OUT_DIR / "DONE"
+if DONE_FILE.exists():
+    DONE_FILE.unlink()
+
 model = YOLO(WEIGHTS)
 
 # CPU fallback if no CUDA GPU is available
-device = 0 if cv2.cuda.getCudaEnabledDeviceCount() > 0 else "cpu"
+device = 0 if torch.cuda.is_available() else "cpu"
 print("Using device:", device)
 
 cap = cv2.VideoCapture(VIDEO_IN)
@@ -28,7 +33,6 @@ def bytes_to_kb(n_bytes: int) -> float:
     return n_bytes / 1024.0
 
 def bytes_per_sec_to_kbps(bps: float) -> float:
-    # kilobits per second (kbps): bytes/sec -> bits/sec -> /1000
     return (bps * 8.0) / 1000.0
 
 def write_batch(batch_frames, start_frame, end_frame):
@@ -39,11 +43,9 @@ def write_batch(batch_frames, start_frame, end_frame):
 
     payload = {"frames": batch_frames}
 
-    # JSON (pretty)
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
 
-    # Compressed JSON (gzip) - no indent for better compression
     with gzip.open(gz_path, "wt", encoding="utf-8") as f:
         json.dump(payload, f)
 
@@ -114,3 +116,6 @@ if batch_frames:
     write_batch(batch_frames, batch_frames[0]["frame"], batch_frames[-1]["frame"])
 
 print("Wrote stats ->", stats_path)
+
+DONE_FILE.write_text("", encoding="utf-8")
+print("Created DONE marker ->", DONE_FILE)
