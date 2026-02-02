@@ -1,4 +1,4 @@
-
+# sender.py
 import asyncio
 import gzip
 import json
@@ -27,7 +27,6 @@ BATCH_SIZE = 30  # must match exporter
 
 
 def stable_size(p: Path) -> bool:
-    # ensure file is done writing (stable across two immediate checks)
     s1 = p.stat().st_size
     s2 = p.stat().st_size
     return s1 == s2 and s1 > 0
@@ -46,7 +45,6 @@ def parse_range_from_name(name: str):
 
 
 def cleanup_plain_json(sent_names: set[str]):
-    # Move plain .json duplicates to sent/ without sending
     for p in WATCH_DIR.glob("*.json"):
         if p.name == "START.json":
             continue
@@ -75,7 +73,6 @@ def load_frames_from_gz(p: Path) -> list:
 async def main():
     sent_names = set(x.name for x in SENT_DIR.glob("*"))
 
-    # --- Load START.json with safe fallback ---
     video_start_ts = None
     fps = 30.0
 
@@ -89,10 +86,12 @@ async def main():
         await asyncio.sleep(0.25)
 
     if video_start_ts is None:
-        # IMPORTANT: fallback to current time, NOT 0 (prevents epoch-sized delay)
         video_start_ts = time.time()
         fps = 30.0
-        print("WARNING: START.json missing/unreadable. Using fallback:", {"video_start_ts": video_start_ts, "fps": fps})
+        print(
+            "WARNING: START.json missing/unreadable. Using fallback:",
+            {"video_start_ts": video_start_ts, "fps": fps},
+        )
     else:
         print("Loaded START.json:", {"video_start_ts": video_start_ts, "fps": fps})
 
@@ -101,15 +100,25 @@ async def main():
             async with websockets.connect(RECEIVER_WS, max_size=MAX_SIZE) as ws:
                 print("Connected to", RECEIVER_WS)
 
-                # send init once per connection
-                await ws.send(json.dumps({"type": "init", "video_start_ts": float(video_start_ts), "fps": float(fps)}))
+                await ws.send(
+                    json.dumps(
+                        {
+                            "type": "init",
+                            "video_start_ts": float(video_start_ts),
+                            "fps": float(fps),
+                        }
+                    )
+                )
 
                 while True:
                     cleanup_plain_json(sent_names)
 
-                    # ONLY send .json.gz (prevents duplicates)
                     candidates = sorted(
-                        [p for p in WATCH_DIR.glob("*.json.gz") if p.is_file() and p.name not in sent_names],
+                        [
+                            p
+                            for p in WATCH_DIR.glob("*.json.gz")
+                            if p.is_file() and p.name not in sent_names
+                        ],
                         key=lambda x: x.name,
                     )
 
@@ -122,7 +131,6 @@ async def main():
                         continue
 
                     for p in candidates:
-                        # wait until stable
                         for _ in range(30):
                             if stable_size(p):
                                 break
@@ -154,7 +162,10 @@ async def main():
                             "frames": frames,
                         }
 
-                        out_bytes = gzip.compress(json.dumps(wrapped, separators=(",", ":")).encode("utf-8"), compresslevel=6)
+                        out_bytes = gzip.compress(
+                            json.dumps(wrapped, separators=(",", ":")).encode("utf-8"),
+                            compresslevel=6,
+                        )
                         await ws.send(out_bytes)
 
                         dst = SENT_DIR / p.name

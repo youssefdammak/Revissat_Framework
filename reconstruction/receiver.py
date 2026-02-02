@@ -1,4 +1,4 @@
-# reconstruction/receiver_ws_save_video.py
+# receiver.py
 # pip install websockets opencv-python numpy
 
 import asyncio
@@ -11,17 +11,14 @@ import cv2
 import numpy as np
 import websockets
 
-# ===================== CONFIG =====================
-
 PORT = 8765
 
-BACKGROUND_PATH = "background.jpg"   # set None for black background
+BACKGROUND_PATH = "background.jpg"  # set None for black background
 OUT_VIDEO = "reconstructed.mp4"
-FOURCC = "mp4v"                      # try "avc1" if mp4v fails
+FOURCC = "mp4v"  # try "avc1" if mp4v fails
 
 INITIAL_BUFFER_FRAMES = 150
 MAX_STORE_FRAMES = 20000
-PREROLL_PREVIEW_EVERY = 10
 
 # ===================== STATE =====================
 
@@ -30,11 +27,8 @@ max_received_frame = -1
 eos_received = False
 lock = asyncio.Lock()
 
-video_start_ts = None        # sender capture start (epoch)
-video_play_start_ts = None   # local playback start
-fps = 30.0
-
-batch_ranges = []  # list of {batch_id,start_frame,end_frame,kbps}
+fps = None
+batch_ranges = []  # {batch_id,start_frame,end_frame,kbps}
 
 # ===================== HELPERS =====================
 
@@ -91,7 +85,6 @@ def overlay_text_box(
         bg_color,
         -1,
     )
-
     cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
 
     yy = y
@@ -107,13 +100,6 @@ def find_batch_for_frame(frame_idx: int):
     return None
 
 
-def compute_delay(play_frame: int) -> float:
-    if video_start_ts is None or fps <= 0:
-        return 0.0
-    capture_ts = video_start_ts + (play_frame / fps)
-    return max(0.0, time.time() - capture_ts)
-
-
 def format_clock(elapsed_s: float) -> str:
     minutes = int(elapsed_s // 60)
     seconds = int(elapsed_s % 60)
@@ -121,7 +107,7 @@ def format_clock(elapsed_s: float) -> str:
     return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
 
-def render_frame(bg, frame_idx: int, dets):
+def render_frame(bg, frame_idx: int, dets, clock_s: float, delay_s: float):
     frame = bg.copy()
     if dets:
         draw_detections(frame, dets)
@@ -129,11 +115,6 @@ def render_frame(bg, frame_idx: int, dets):
     br = find_batch_for_frame(frame_idx)
     bid = br["batch_id"] if br else -1
     kbps = br["kbps"] if br else 0.0
-    delay_s = compute_delay(frame_idx)
-
-    clock_s = 0.0
-    if video_play_start_ts is not None:
-        clock_s = time.time() - video_play_start_ts
 
     overlay_text_box(
         frame,
@@ -143,24 +124,24 @@ def render_frame(bg, frame_idx: int, dets):
             f"Clock : {format_clock(clock_s)}",
         ],
     )
-
     return frame
+
 
 # ===================== WEBSOCKET HANDLER =====================
 
 async def handler(ws):
-    global max_received_frame, eos_received, video_start_ts, fps
+    global max_received_frame, eos_received, fps
 
     async for msg in ws:
         if isinstance(msg, str):
             data = json.loads(msg)
             t = data.get("type")
             if t == "init":
-                v = float(data.get("video_start_ts", 0.0))
-                if v >= 1_000_000_000:
-                    video_start_ts = v
-                fps = float(data.get("fps", fps))
-                print("INIT:", {"video_start_ts": video_start_ts, "fps": fps})
+                try:
+                    fps = float(data.get("fps", fps if fps is not None else 30.0))
+                except Exception:
+                    fps = fps if fps is not None else 30.0
+                print("INIT:", {"fps": fps})
             elif t == "eos":
                 eos_received = True
                 print("EOS received")
@@ -171,7 +152,6 @@ async def handler(ws):
 
         wire_bytes = len(msg)
         data = json.loads(gzip.decompress(msg).decode("utf-8"))
-
         if data.get("type") != "r1_batch":
             continue
 
@@ -179,8 +159,14 @@ async def handler(ws):
         start_f = int(data["start_frame"])
         end_f = int(data["end_frame"])
 
+        if fps is None:
+            try:
+                fps = float(data.get("fps", 30.0))
+            except Exception:
+                fps = 30.0
+
         frames = data.get("frames", [])
-        duration_s = (len(frames) / fps) if fps > 0 else 0.0
+        duration_s = (len(frames) / fps) if fps and fps > 0 else 0.0
         kbps = ((wire_bytes * 8.0) / (duration_s * 1000.0)) if duration_s > 0 else 0.0
 
         async with lock:
@@ -199,11 +185,10 @@ async def handler(ws):
 
         print(f"Got batch{batch_id} {start_f}->{end_f} kbps={kbps:.1f}")
 
+
 # ===================== RENDER LOOP =====================
 
 async def render_and_save():
-    global video_play_start_ts
-
     bg = load_background()
     if bg is None:
         bg = np.zeros((720, 1280, 3), dtype=np.uint8)
@@ -211,66 +196,97 @@ async def render_and_save():
     H, W = bg.shape[:2]
     Path(OUT_VIDEO).parent.mkdir(parents=True, exist_ok=True)
 
-    writer = cv2.VideoWriter(
-        OUT_VIDEO,
-        cv2.VideoWriter_fourcc(*FOURCC),
-        fps,
-        (W, H),
-    )
-
-    if not writer.isOpened():
-        raise RuntimeError("Failed to open VideoWriter")
-
     cv2.namedWindow("Reconstruction", cv2.WINDOW_NORMAL)
 
+    # Wait until we have fps + at least one received frame (or EOS)
     while True:
         async with lock:
             mr = max_received_frame
             eos = eos_received
-        if mr >= 0 or eos:
+        if (fps is not None and fps > 0 and mr >= 0) or eos:
             break
         await asyncio.sleep(0.02)
 
-    video_play_start_ts = time.time()
+    out_fps = float(fps) if fps and fps > 0 else 30.0
+    frame_step = 1.0 / max(out_fps, 1e-6)
 
-    preroll_end = max(0, mr - INITIAL_BUFFER_FRAMES)
-    for fidx in range(preroll_end):
-        async with lock:
-            dets = detections_by_frame.get(fidx, [])
-        frame = render_frame(bg, fidx, dets)
-        writer.write(frame)
+    writer = cv2.VideoWriter(
+        OUT_VIDEO,
+        cv2.VideoWriter_fourcc(*FOURCC),
+        out_fps,
+        (W, H),
+    )
+    if not writer.isOpened():
+        raise RuntimeError("Failed to open VideoWriter")
 
-    play_frame = preroll_end
-    frame_time = 1.0 / max(fps, 1e-6)
-    last = time.perf_counter()
+    # Choose where to start showing (buffer)
+    async with lock:
+        mr = max_received_frame
+    play_frame = max(0, mr - INITIAL_BUFFER_FRAMES)
+
+    # Real timer: starts at 0 and keeps increasing (monotonic)
+    clock_start = time.perf_counter()
+
+    # Drive output at fps, writing every tick.
+    next_tick = time.perf_counter()
 
     while True:
-        dt = time.perf_counter() - last
-        if dt < frame_time:
-            await asyncio.sleep(frame_time - dt)
-        last = time.perf_counter()
+        now = time.perf_counter()
+        sleep_s = next_tick - now
+        if sleep_s > 0:
+            await asyncio.sleep(sleep_s)
+        next_tick += frame_step
 
         async with lock:
-            dets = detections_by_frame.get(play_frame, [])
             mr = max_received_frame
             eos = eos_received
 
-        frame = render_frame(bg, play_frame, dets)
+        # Clock always moves
+        clock_s = time.perf_counter() - clock_start
+
+        # If we have not received up to play_frame yet, clamp to last received
+        # BUT still write frames (duplicates) so clock keeps moving in the saved video.
+        if mr >= 0 and play_frame > mr:
+            show_frame = mr
+        else:
+            show_frame = play_frame
+
+        async with lock:
+            dets = detections_by_frame.get(show_frame, [])
+
+        # Original time is where we are in the original timeline (based on play_frame progress)
+        original_t = (play_frame / out_fps) if out_fps > 0 else 0.0
+
+        # Generated time is the real clock
+        generated_t = clock_s
+
+        # Your requested metric:
+        delay_s = generated_t - original_t
+
+        frame = render_frame(bg, show_frame, dets, generated_t, delay_s)
         writer.write(frame)
         cv2.imshow("Reconstruction", frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
-        play_frame += 1
-        if eos and play_frame > mr:
+        # Advance original timeline ONLY if the next frame exists
+        # (this is what makes delay grow when network/processing is behind)
+        async with lock:
+            mr2 = max_received_frame
+            eos2 = eos_received
+
+        if play_frame <= mr2:
+            play_frame += 1
+
+        # End condition: EOS and we've advanced past the last received frame
+        if eos2 and mr2 >= 0 and play_frame > mr2:
             break
-        if play_frame > mr and not eos:
-            play_frame = mr
 
     writer.release()
     cv2.destroyAllWindows()
     print("Saved ->", OUT_VIDEO)
+
 
 # ===================== MAIN =====================
 

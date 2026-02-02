@@ -1,3 +1,4 @@
+# export_r1.py (same logic, kept; only small safety: ensure fps is float)
 import json
 import gzip
 import os
@@ -29,22 +30,24 @@ cap = cv2.VideoCapture(VIDEO_IN)
 if not cap.isOpened():
     raise RuntimeError(f"Failed to open video: {VIDEO_IN}")
 
-fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+fps = float(cap.get(cv2.CAP_PROP_FPS) or 30.0)
 
-# write START marker (for stable delay)
 START_FILE.write_text(
-    json.dumps({"video_start_ts": time.time(), "fps": float(fps)}),
+    json.dumps({"video_start_ts": time.time(), "fps": fps}),
     encoding="utf-8",
 )
 print("Created START marker ->", START_FILE)
 
 stats_path = OUT_DIR / "sizes_and_datarates.txt"
 
+
 def bytes_to_kb(n_bytes: int) -> float:
     return n_bytes / 1024.0
 
+
 def bytes_per_sec_to_kbps(bytes_per_sec: float) -> float:
     return (bytes_per_sec * 8.0) / 1000.0
+
 
 def write_batch(batch_frames, start_frame, end_frame):
     video_stem = Path(VIDEO_IN).stem
@@ -53,7 +56,6 @@ def write_batch(batch_frames, start_frame, end_frame):
 
     payload = {"frames": batch_frames}
 
-    # write gzipped JSON
     with gzip.open(gz_path, "wt", encoding="utf-8") as f:
         json.dump(payload, f)
 
@@ -74,6 +76,7 @@ def write_batch(batch_frames, start_frame, end_frame):
         )
 
     print("Saved:", gz_path)
+
 
 batch_frames = []
 frame_idx = 0
